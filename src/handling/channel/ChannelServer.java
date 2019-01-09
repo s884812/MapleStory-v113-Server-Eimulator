@@ -36,7 +36,7 @@ import handling.ByteArrayMaplePacket;
 import handling.MaplePacket;
 import handling.MapleServerHandler;
 import handling.login.LoginServer;
-import handling.mina.MapleCodecFactory;
+import handling.netty.ServerConnection;
 import handling.world.CheaterData;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import scripting.EventScriptManager;
@@ -44,14 +44,10 @@ import server.MapleSquad;
 import server.MapleSquad.MapleSquadType;
 import server.maps.MapleMapFactory;
 import server.shops.HiredMerchant;
+import server.shops.HiredFishing;
 import tools.MaplePacketCreator;
 import server.life.PlayerNPC;
-import org.apache.mina.common.ByteBuffer;
-import org.apache.mina.common.SimpleByteBufferAllocator;
-import org.apache.mina.common.IoAcceptor;
-import org.apache.mina.filter.codec.ProtocolCodecFilter;
-import org.apache.mina.transport.socket.nio.SocketAcceptorConfig;
-import org.apache.mina.transport.socket.nio.SocketAcceptor;
+
 import java.io.Serializable;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -69,23 +65,25 @@ import tools.ConcurrentEnumMap;
 
 public class ChannelServer implements Serializable {
 
+    private static ServerConnection init;
     public static long serverStartTime;
     private int expRate, mesoRate, dropRate, cashRate;
     private short port = 8585;
     private static final short DEFAULT_PORT = 8585;
-    private int channel, running_MerchantID = 0, flags = 0;
+    private int channel, running_MerchantID = 0, running_FishingID = 0, flags = 0;
     private String serverMessage, key, ip, serverName;
     private boolean shutdown = false, finishedShutdown = false, MegaphoneMuteState = false, adminOnly = false;
     private PlayerStorage players;
     private MapleServerHandler serverHandler;
-    private IoAcceptor acceptor;
     private final MapleMapFactory mapFactory;
     private EventScriptManager eventSM;
     private static final Map<Integer, ChannelServer> instances = new HashMap<Integer, ChannelServer>();
     private final Map<MapleSquadType, MapleSquad> mapleSquads = new ConcurrentEnumMap<MapleSquadType, MapleSquad>(MapleSquadType.class);
     private final Map<Integer, HiredMerchant> merchants = new HashMap<Integer, HiredMerchant>();
+    private final Map<Integer, HiredFishing> fishings = new HashMap<Integer, HiredFishing>();
     private final Map<Integer, PlayerNPC> playerNPCs = new HashMap<Integer, PlayerNPC>();
     private final ReentrantReadWriteLock merchLock = new ReentrantReadWriteLock(); //merchant
+    private final ReentrantReadWriteLock fishingLock = new ReentrantReadWriteLock(); //hinshing
     private final ReentrantReadWriteLock squadLock = new ReentrantReadWriteLock(); //squad
     private int eventmap = -1;
     private final Map<MapleEventType, MapleEvent> events = new EnumMap<MapleEventType, MapleEvent>(MapleEventType.class);
@@ -134,23 +132,16 @@ public class ChannelServer implements Serializable {
 
         ip = ServerProperties.getProperty("tms.IP") + ":" + port;
 
-        ByteBuffer.setUseDirectBuffers(false);
-        ByteBuffer.setAllocator(new SimpleByteBufferAllocator());
-
-        acceptor = new SocketAcceptor();
-        final SocketAcceptorConfig acceptor_config = new SocketAcceptorConfig();
-        acceptor_config.getSessionConfig().setTcpNoDelay(true);
-        acceptor_config.setDisconnectOnUnbind(true);
-        acceptor_config.getFilterChain().addLast("codec", new ProtocolCodecFilter(new MapleCodecFactory()));
         players = new PlayerStorage(channel);
         loadEvents();
 
         try {
+            init = new ServerConnection(port, 1 , channel);//could code world here to seperate them
+            init.run();
             this.serverHandler = new MapleServerHandler(channel, false);
-            acceptor.bind(new InetSocketAddress(port), serverHandler, acceptor_config);
             System.out.println("Channel " + channel + ": Listening on port " + port + "");
             eventSM.init();
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.out.println("Binding to port " + port + " failed (ch: " + getChannel() + ")" + e);
         }
     }
@@ -167,14 +158,17 @@ public class ChannelServer implements Serializable {
 
         closeAllMerchant();
 
+		System.out.println("Channel " + channel + ", Saving hired fishings...");
+		
+		closeAllFishing();
+		
         System.out.println("Channel " + channel + ", Saving characters...");
 
         getPlayerStorage().disconnectAll();
 
         System.out.println("Channel " + channel + ", Unbinding...");
 
-        acceptor.unbindAll();
-        acceptor = null;
+        init.close();
 
         //temporary while we dont have !addchannel
         instances.remove(channel);
@@ -187,9 +181,6 @@ public class ChannelServer implements Serializable {
 //        }
     }
 
-    public final void unbind() {
-        acceptor.unbindAll();
-    }
 
     public final boolean hasFinishedShutdown() {
         return finishedShutdown;
@@ -209,7 +200,7 @@ public class ChannelServer implements Serializable {
 
     public final void addPlayer(final MapleCharacter chr) {
         getPlayerStorage().registerPlayer(chr);
-        chr.getClient().getSession().write(MaplePacketCreator.serverMessage(serverMessage));
+        chr.getClient().sendPacket(MaplePacketCreator.serverMessage(serverMessage));
     }
 
     public final PlayerStorage getPlayerStorage() {
@@ -421,6 +412,7 @@ public class ChannelServer implements Serializable {
         }
         return contains;
     }
+	
 
     public final List<HiredMerchant> searchMerchant(final int itemSearch) {
         final List<HiredMerchant> list = new LinkedList<HiredMerchant>();
@@ -438,6 +430,63 @@ public class ChannelServer implements Serializable {
             merchLock.readLock().unlock();
         }
         return list;
+    }
+	
+	public final void closeAllFishing() {
+        fishingLock.writeLock().lock();
+        try {
+            final Iterator<HiredFishing> fishings_ = fishings.values().iterator();
+            while (fishings_.hasNext()) {
+                fishings_.next().closeShop(true, false);
+                fishings_.remove();
+            }
+        } finally {
+            fishingLock.writeLock().unlock();
+        }
+    }
+	
+	public final int addFishing(final HiredFishing hFishing) {
+        fishingLock.writeLock().lock();
+
+        int runningmer = 0;
+        try {
+            runningmer = running_FishingID;
+            fishings.put(running_FishingID, hFishing);
+            running_FishingID++;
+        } finally {
+            fishingLock.writeLock().unlock();
+        }
+        return runningmer;
+    }
+
+    public final void removeFishing(final HiredFishing hFishing) {
+        fishingLock.writeLock().lock();
+
+        try {
+            fishings.remove(hFishing.getStoreId());
+        } finally {
+            fishingLock.writeLock().unlock();
+        }
+    }
+
+    public final HiredFishing containsFishing(final int accid) {
+        HiredFishing contains = null;
+
+        fishingLock.readLock().lock();
+        try {
+            final Iterator itr = fishings.values().iterator();
+
+            while (itr.hasNext()) {
+				HiredFishing Fishing_itr = ((HiredFishing) itr.next());
+                if (Fishing_itr.getOwnerAccId() == accid) {
+                    contains = Fishing_itr;
+                    break;
+                }
+            }
+        } finally {
+            fishingLock.readLock().unlock();
+        }
+        return contains;
     }
 
     public final void toggleMegaphoneMuteState() {

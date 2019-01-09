@@ -68,6 +68,7 @@ public enum RecvPacketOpcode implements WritableIntValueHolder {
     NPC_SHOP,
     STORAGE,
     USE_HIRED_MERCHANT,
+	USE_HIRED_FISHING,
     MERCH_ITEM_STORE,
     DUEY_ACTION,
     ITEM_SORT,
@@ -172,7 +173,7 @@ public enum RecvPacketOpcode implements WritableIntValueHolder {
     GAME_POLL,
     OWL,
     OWL_WARP,
-    //XMAS_SURPRISE, //header -> uniqueid(long) is entire structure
+    XMAS_SURPRISE, //header -> uniqueid(long) is entire structure
     USE_OWL_MINERVA,
     RPS_GAME,
     UPDATE_QUEST,

@@ -24647,6 +24647,79 @@ CREATE TABLE `hiredmerchitems` (
   `sender` varchar(15) NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=big5;
 
+--
+-- 資料表結構 `hiredfishing`
+--
+
+CREATE TABLE `hiredfishing` (
+  `PackageId` int(10) UNSIGNED NOT NULL,
+  `characterid` int(10) UNSIGNED DEFAULT '0',
+  `accountid` int(10) UNSIGNED DEFAULT NULL,
+  `Mesos` int(10) UNSIGNED DEFAULT '0',
+  `time` bigint(20) UNSIGNED DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=big5;
+
+-- --------------------------------------------------------
+
+--
+-- 資料表結構 `hiredfishingequipment`
+--
+
+CREATE TABLE `hiredfishingequipment` (
+  `inventoryequipmentid` int(10) UNSIGNED NOT NULL,
+  `inventoryitemid` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  `upgradeslots` int(11) NOT NULL DEFAULT '0',
+  `level` int(11) NOT NULL DEFAULT '0',
+  `str` int(11) NOT NULL DEFAULT '0',
+  `dex` int(11) NOT NULL DEFAULT '0',
+  `int` int(11) NOT NULL DEFAULT '0',
+  `luk` int(11) NOT NULL DEFAULT '0',
+  `hp` int(11) NOT NULL DEFAULT '0',
+  `mp` int(11) NOT NULL DEFAULT '0',
+  `watk` int(11) NOT NULL DEFAULT '0',
+  `matk` int(11) NOT NULL DEFAULT '0',
+  `wdef` int(11) NOT NULL DEFAULT '0',
+  `mdef` int(11) NOT NULL DEFAULT '0',
+  `acc` int(11) NOT NULL DEFAULT '0',
+  `avoid` int(11) NOT NULL DEFAULT '0',
+  `hands` int(11) NOT NULL DEFAULT '0',
+  `speed` int(11) NOT NULL DEFAULT '0',
+  `jump` int(11) NOT NULL DEFAULT '0',
+  `ViciousHammer` tinyint(2) NOT NULL DEFAULT '0',
+  `itemEXP` int(11) NOT NULL DEFAULT '0',
+  `durability` int(11) NOT NULL DEFAULT '-1',
+  `enhance` tinyint(3) NOT NULL DEFAULT '0',
+  `potential1` smallint(5) NOT NULL DEFAULT '0',
+  `potential2` smallint(5) NOT NULL DEFAULT '0',
+  `potential3` smallint(5) NOT NULL DEFAULT '0',
+  `hpR` smallint(5) NOT NULL DEFAULT '0',
+  `mpR` smallint(5) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=big5;
+
+-- --------------------------------------------------------
+
+--
+-- 資料表結構 `hiredfishingitems`
+--
+
+CREATE TABLE `hiredfishingitems` (
+  `inventoryitemid` int(10) UNSIGNED NOT NULL,
+  `characterid` int(11) DEFAULT NULL,
+  `accountid` int(10) DEFAULT NULL,
+  `packageid` int(11) DEFAULT NULL,
+  `itemid` int(11) NOT NULL DEFAULT '0',
+  `inventorytype` int(11) NOT NULL DEFAULT '0',
+  `position` int(11) NOT NULL DEFAULT '0',
+  `quantity` int(11) NOT NULL DEFAULT '0',
+  `owner` tinytext,
+  `GM_Log` tinytext,
+  `uniqueid` int(11) NOT NULL DEFAULT '-1',
+  `flag` int(2) NOT NULL DEFAULT '0',
+  `expiredate` bigint(20) NOT NULL DEFAULT '-1',
+  `type` tinyint(1) NOT NULL DEFAULT '0',
+  `sender` varchar(15) NOT NULL DEFAULT ''
+) ENGINE=InnoDB DEFAULT CHARSET=big5;
+
 -- --------------------------------------------------------
 
 --
@@ -25176,7 +25249,12 @@ CREATE TABLE `queststatus` (
   `customData` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=big5;
 
+--
+-- 資料表的匯出資料 `queststatus`
+--
 
+
+-- --------------------------------------------------------
 
 --
 -- 資料表結構 `queststatusmobs`
@@ -25188,6 +25266,10 @@ CREATE TABLE `queststatusmobs` (
   `mob` int(11) NOT NULL DEFAULT '0',
   `count` int(11) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=big5 ROW_FORMAT=DYNAMIC;
+
+--
+-- 資料表的匯出資料 `queststatusmobs`
+--
 
 
 -- --------------------------------------------------------
@@ -26120,6 +26202,8 @@ CREATE TABLE `regrocklocations` (
 --
 -- 資料表的匯出資料 `regrocklocations`
 --
+
+
 
 -- --------------------------------------------------------
 
@@ -29352,6 +29436,8 @@ CREATE TABLE `skills` (
 --
 
 
+-- --------------------------------------------------------
+
 --
 -- 資料表結構 `skills_cooldowns`
 --
@@ -30744,6 +30830,32 @@ ALTER TABLE `hiredmerchitems`
   ADD KEY `characterid_2` (`characterid`,`inventorytype`);
 
 --
+-- 資料表索引 `hiredfishing`
+--
+ALTER TABLE `hiredfishing`
+  ADD PRIMARY KEY (`PackageId`);
+
+--
+-- 資料表索引 `hiredfishingequipment`
+--
+ALTER TABLE `hiredfishingequipment`
+  ADD PRIMARY KEY (`inventoryequipmentid`),
+  ADD KEY `inventoryitemid` (`inventoryitemid`);
+
+--
+-- 資料表索引 `hiredfishingitems`
+--
+ALTER TABLE `hiredfishingitems`
+  ADD PRIMARY KEY (`inventoryitemid`),
+  ADD KEY `inventoryitems_ibfk_1` (`characterid`),
+  ADD KEY `characterid` (`characterid`),
+  ADD KEY `inventorytype` (`inventorytype`),
+  ADD KEY `accountid` (`accountid`),
+  ADD KEY `packageid` (`packageid`),
+  ADD KEY `characterid_2` (`characterid`,`inventorytype`);
+
+  
+--
 -- 資料表索引 `htsquads`
 --
 ALTER TABLE `htsquads`
@@ -31200,7 +31312,7 @@ ALTER TABLE `guilds`
 -- 使用資料表 AUTO_INCREMENT `hiredmerch`
 --
 ALTER TABLE `hiredmerch`
-  MODIFY `PackageId` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `PackageId` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 --
 -- 使用資料表 AUTO_INCREMENT `hiredmerchequipment`
 --
@@ -31210,7 +31322,23 @@ ALTER TABLE `hiredmerchequipment`
 -- 使用資料表 AUTO_INCREMENT `hiredmerchitems`
 --
 ALTER TABLE `hiredmerchitems`
-  MODIFY `inventoryitemid` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `inventoryitemid` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+  
+--
+-- 使用資料表 AUTO_INCREMENT `hiredfishing`
+--
+ALTER TABLE `hiredfishing`
+  MODIFY `PackageId` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+--
+-- 使用資料表 AUTO_INCREMENT `hiredfishingequipment`
+--
+ALTER TABLE `hiredfishingequipment`
+  MODIFY `inventoryequipmentid` int(10) UNSIGNED NOT NULL AUTO_INCREMENT;
+--
+-- 使用資料表 AUTO_INCREMENT `hiredfishingitems`
+--
+ALTER TABLE `hiredfishingitems`
+  MODIFY `inventoryitemid` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
 --
 -- 使用資料表 AUTO_INCREMENT `htsquads`
 --
@@ -31459,6 +31587,12 @@ ALTER TABLE `famelog`
 --
 ALTER TABLE `hiredmerchequipment`
   ADD CONSTRAINT `hiredmerchantequipment_ibfk_1` FOREIGN KEY (`inventoryitemid`) REFERENCES `hiredmerchitems` (`inventoryitemid`) ON DELETE CASCADE;
+
+--
+-- 資料表的 Constraints `hiredfishingequipment`
+--
+ALTER TABLE `hiredfishingequipment`
+  ADD CONSTRAINT `hiredfishingequipment` FOREIGN KEY (`inventoryitemid`) REFERENCES `hiredfishingitems` (`inventoryitemid`) ON DELETE CASCADE;
 
 --
 -- 資料表的 Constraints `inventoryequipment`
